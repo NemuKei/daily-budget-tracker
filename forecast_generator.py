@@ -71,8 +71,10 @@ sat_font = Font(color="003366")
 sun_fill = PatternFill(start_color="FFE5E5", end_color="FFE5E5", fill_type="solid")
 sun_font = Font(color="990000")
 gray_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
-thin = Side(style="thin")
-medium = Side(style="medium")
+budget_fill = PatternFill(start_color="E6F2FF", end_color="E6F2FF", fill_type="solid")
+fc_fill = PatternFill(start_color="E6FFE6", end_color="E6FFE6", fill_type="solid")
+thin = Side(style="thin", color="999999")
+medium = Side(style="medium", color="999999")
 
 # --- 各月シート作成 ---
 summary_dict: dict[tuple[int, int], dict[str, int]] = {}
@@ -260,9 +262,48 @@ for sheet_name, df in xls.items():
     # 合計行
     total_row = data_end_row + 1
     ws.cell(row=total_row, column=1, value="合計")
-    for col in range(3, ws.max_column + 1):
-        letter = get_column_letter(col)
-        ws.cell(row=total_row, column=col).value = f"=SUM({letter}2:{letter}{data_end_row})"
+    for kind in ["予算", "FC", "実績"]:
+        r_col = header_map[f"室数_{kind}"]
+        p_col = header_map[f"人数_{kind}"]
+        s_col = header_map[f"宿泊売上_{kind}"]
+        occ_col = header_map[f"OCC_{kind}"]
+        adr_col = header_map[f"ADR_{kind}"]
+        dor_col = header_map[f"DOR_{kind}"]
+        rev_col = header_map[f"RevPAR_{kind}"]
+        rl = get_column_letter(r_col)
+        pl = get_column_letter(p_col)
+        sl = get_column_letter(s_col)
+        ws.cell(row=total_row, column=r_col).value = f"=SUM({rl}2:{rl}{data_end_row})"
+        ws.cell(row=total_row, column=p_col).value = f"=SUM({pl}2:{pl}{data_end_row})"
+        ws.cell(row=total_row, column=s_col).value = f"=SUM({sl}2:{sl}{data_end_row})"
+        ws.cell(row=total_row, column=occ_col).value = (
+            f"=IFERROR(SUM({rl}2:{rl}{data_end_row})/{capacity}/COUNT({rl}2:{rl}{data_end_row}), \"\")"
+        )
+        ws.cell(row=total_row, column=adr_col).value = (
+            f"=IFERROR(SUM({sl}2:{sl}{data_end_row})/SUM({pl}2:{pl}{data_end_row}), \"\")"
+        )
+        ws.cell(row=total_row, column=dor_col).value = (
+            f"=IFERROR(SUM({pl}2:{pl}{data_end_row})/SUM({rl}2:{rl}{data_end_row}), \"\")"
+        )
+        ws.cell(row=total_row, column=rev_col).value = (
+            f"=IFERROR(SUM({sl}2:{sl}{data_end_row})/{capacity}/COUNT({rl}2:{rl}{data_end_row}), \"\")"
+        )
+        for col in [occ_col, adr_col, dor_col, rev_col]:
+            ws.cell(row=total_row, column=col).number_format = ws.cell(row=2, column=col).number_format
+
+    for diff_col, l, r in [
+        ("差_OCC_FC-予算", "OCC_FC", "OCC_予算"),
+        ("差_ADR_FC-予算", "ADR_FC", "ADR_予算"),
+        ("差_売上_FC-予算", "宿泊売上_FC", "宿泊売上_予算"),
+        ("差_OCC_実績-FC", "OCC_実績", "OCC_FC"),
+        ("差_ADR_実績-FC", "ADR_実績", "ADR_FC"),
+        ("差_売上_実績-FC", "宿泊売上_実績", "宿泊売上_FC"),
+    ]:
+        left_col = header_map[l]
+        right_col = header_map[r]
+        ltr = get_column_letter(left_col)
+        rtr = get_column_letter(right_col)
+        ws.cell(row=total_row, column=header_map[diff_col]).value = f"=IFERROR({ltr}{total_row}-{rtr}{total_row}, \"\")"
 
     # 修正月次フォーキャスト
     forecast_row = total_row + 1
@@ -277,10 +318,21 @@ for sheet_name, df in xls.items():
         cell.value = f"=SUM({act_letter}2:{act_letter}{data_end_row})+SUMIFS({fc_letter}2:{fc_letter}{data_end_row},{act_letter}2:{act_letter}{data_end_row},\"\")"
         cell.number_format = ws.cell(row=2, column=fc_col).number_format
 
+    # 背景色設定
+    budget_cols = [header_map[f"{m}_予算"] for m in metrics]
+    fc_cols = [header_map[f"{m}_FC"] for m in metrics]
+    for col in budget_cols:
+        for r in range(2, forecast_row + 1):
+            ws.cell(row=r, column=col).fill = budget_fill
+    for col in fc_cols:
+        for r in range(2, forecast_row + 1):
+            ws.cell(row=r, column=col).fill = fc_fill
+
     summary_dict[(year, month)] = {
         "sheet": ws.title,
         "total_row": total_row,
         "header_map": header_map,
+        "data_end_row": data_end_row,
     }
 
     # 罫線設定
@@ -307,10 +359,16 @@ for sheet_name, df in xls.items():
 
 # === 年間集計シート ===
 summary = wb.create_sheet(title="年間集計")
-metrics = ["宿泊売上", "室数", "人数", "OCC", "ADR", "DOR", "RevPAR"]
-kinds = ["予算", "FC", "実績"]
-header = ["月"] + [f"{k}_{m}" for k in kinds for m in metrics]
+metrics = ["室数", "人数", "宿泊売上", "OCC", "ADR", "DOR", "RevPAR"]
+header = ["月"]
+for m in metrics:
+    header += [f"{m}_予算", f"{m}_FC", f"{m}_実績", f"差_{m}_FC-予算", f"差_{m}_実績-FC"]
 summary.append(header)
+
+room_refs = {"予算": [], "FC": [], "実績": []}
+pax_refs = {"予算": [], "FC": [], "実績": []}
+sales_refs = {"予算": [], "FC": [], "実績": []}
+days = []
 match = re.search(r"(20\d{2})", file_path)
 start_year = int(match.group(1)) if match else datetime.date.today().year
 year = start_year
@@ -321,24 +379,52 @@ for _ in range(12):
     row = [label]
     if info:
         sheet = wb[info["sheet"]]
-        total_row = info["total_row"]
+        tr = info["total_row"]
         hmap = info["header_map"]
-        for k in kinds:
-            for m in metrics:
-                if k == "予算":
-                    col = hmap.get(f"{m}_予算")
-                elif k == "FC":
-                    col = hmap.get(f"{m}_FC")
-                else:
-                    col = hmap.get(f"{m}_実績")
-                if col:
-                    letter = get_column_letter(col)
-                    row.append(f"='{sheet.title}'!{letter}{total_row}")
-                else:
-                    row.append(0)
+        days.append(info["data_end_row"] - 1)
+        for m in metrics:
+            b_col = hmap.get(f"{m}_予算")
+            f_col = hmap.get(f"{m}_FC")
+            a_col = hmap.get(f"{m}_実績")
+            if b_col:
+                row.append(f"='{sheet.title}'!{get_column_letter(b_col)}{tr}")
+            else:
+                row.append(0)
+            if f_col:
+                row.append(f"='{sheet.title}'!{get_column_letter(f_col)}{tr}")
+            else:
+                row.append(0)
+            if a_col:
+                row.append(f"='{sheet.title}'!{get_column_letter(a_col)}{tr}")
+            else:
+                row.append(0)
+            row += ["", ""]
+        room_refs["予算"].append(f"='{sheet.title}'!{get_column_letter(hmap['室数_予算'])}{tr}")
+        room_refs["FC"].append(f"='{sheet.title}'!{get_column_letter(hmap['室数_FC'])}{tr}")
+        room_refs["実績"].append(f"='{sheet.title}'!{get_column_letter(hmap['室数_実績'])}{tr}")
+        pax_refs["予算"].append(f"='{sheet.title}'!{get_column_letter(hmap['人数_予算'])}{tr}")
+        pax_refs["FC"].append(f"='{sheet.title}'!{get_column_letter(hmap['人数_FC'])}{tr}")
+        pax_refs["実績"].append(f"='{sheet.title}'!{get_column_letter(hmap['人数_実績'])}{tr}")
+        sales_refs["予算"].append(f"='{sheet.title}'!{get_column_letter(hmap['宿泊売上_予算'])}{tr}")
+        sales_refs["FC"].append(f"='{sheet.title}'!{get_column_letter(hmap['宿泊売上_FC'])}{tr}")
+        sales_refs["実績"].append(f"='{sheet.title}'!{get_column_letter(hmap['宿泊売上_実績'])}{tr}")
     else:
-        row += [0] * (len(metrics) * len(kinds))
+        row += [0] * (len(metrics) * 5)
+        days.append(0)
     summary.append(row)
+    row_idx = summary.max_row
+    for idx, m in enumerate(metrics):
+        base = 2 + idx * 5
+        f_col_idx = base + 1
+        a_col_idx = base + 2
+        d1 = base + 3
+        d2 = base + 4
+        summary.cell(row=row_idx, column=d1).value = (
+            f"=IFERROR({get_column_letter(f_col_idx)}{row_idx}-{get_column_letter(base)}{row_idx}, \"\")"
+        )
+        summary.cell(row=row_idx, column=d2).value = (
+            f"=IFERROR({get_column_letter(a_col_idx)}{row_idx}-{get_column_letter(f_col_idx)}{row_idx}, \"\")"
+        )
     if month == 12:
         month = 1
         year += 1
@@ -349,9 +435,76 @@ for _ in range(12):
 total_row = summary.max_row + 1
 end_row = total_row - 1
 summary.cell(row=total_row, column=1, value="年間合計")
-for col in range(2, summary.max_column + 1):
-    letter = get_column_letter(col)
-    summary.cell(row=total_row, column=col).value = f"=SUM({letter}2:{letter}{end_row})"
+for idx, m in enumerate(metrics):
+    base = 2 + idx * 5
+    fc = base + 1
+    act = base + 2
+    diff1 = base + 3
+    diff2 = base + 4
+    b_letter = get_column_letter(base)
+    f_letter = get_column_letter(fc)
+    a_letter = get_column_letter(act)
+    summary.cell(row=total_row, column=base).value = f"=SUM({b_letter}2:{b_letter}{end_row})"
+    summary.cell(row=total_row, column=fc).value = f"=SUM({f_letter}2:{f_letter}{end_row})"
+    summary.cell(row=total_row, column=act).value = f"=SUM({a_letter}2:{a_letter}{end_row})"
+    summary.cell(row=total_row, column=diff1).value = f"=IFERROR({f_letter}{total_row}-{b_letter}{total_row}, \"\")"
+    summary.cell(row=total_row, column=diff2).value = f"=IFERROR({a_letter}{total_row}-{f_letter}{total_row}, \"\")"
+
+days_sum = sum(days) if days else 0
+for kind, offset in [("予算",0), ("FC",1), ("実績",2)]:
+    room_sum = "+".join(room_refs[kind]) if room_refs[kind] else "0"
+    pax_sum = "+".join(pax_refs[kind]) if pax_refs[kind] else "0"
+    sales_sum = "+".join(sales_refs[kind]) if sales_refs[kind] else "0"
+    occ_col = 2 + metrics.index("OCC") * 5 + offset
+    adr_col = 2 + metrics.index("ADR") * 5 + offset
+    dor_col = 2 + metrics.index("DOR") * 5 + offset
+    rev_col = 2 + metrics.index("RevPAR") * 5 + offset
+    summary.cell(row=total_row, column=occ_col).value = (
+        f"=IFERROR(({room_sum})/{capacity}/{days_sum}, \"\")"
+    )
+    summary.cell(row=total_row, column=adr_col).value = (
+        f"=IFERROR(({sales_sum})/({pax_sum}), \"\")"
+    )
+    summary.cell(row=total_row, column=dor_col).value = (
+        f"=IFERROR(({pax_sum})/({room_sum}), \"\")"
+    )
+    summary.cell(row=total_row, column=rev_col).value = (
+        f"=IFERROR(({sales_sum})/{capacity}/{days_sum}, \"\")"
+    )
+    for c in [occ_col, adr_col, dor_col, rev_col]:
+        summary.cell(row=total_row, column=c).number_format = summary.cell(row=2, column=c).number_format
+
+block_ends = [
+    2 + metrics.index("RevPAR") * 5,  # 予算ブロック最後
+    2 + metrics.index("RevPAR") * 5 + 1,  # FCブロック最後
+    2 + metrics.index("RevPAR") * 5 + 2,  # 実績ブロック最後
+]
+for r in summary.iter_rows(min_row=1, max_row=total_row, max_col=summary.max_column):
+    for c in r:
+        c.border = Border(top=thin, bottom=thin, left=thin, right=thin)
+for end_col in block_ends:
+    for row in range(1, total_row + 1):
+        cell = summary.cell(row=row, column=end_col)
+        cell.border = Border(
+            top=cell.border.top,
+            bottom=cell.border.bottom,
+            left=cell.border.left,
+            right=medium,
+        )
+for cell in summary[1]:
+    cell.font = Font(bold=True)
+    cell.border = Border(top=medium, bottom=medium, left=cell.border.left, right=cell.border.right)
+for cell in summary[total_row]:
+    cell.border = Border(top=medium, bottom=medium, left=cell.border.left, right=cell.border.right)
+
+budget_cols = [2 + i * 5 for i in range(len(metrics))]
+fc_cols = [c + 1 for c in budget_cols]
+for col in budget_cols:
+    for r in range(2, total_row + 1):
+        summary.cell(row=r, column=col).fill = budget_fill
+for col in fc_cols:
+    for r in range(2, total_row + 1):
+        summary.cell(row=r, column=col).fill = fc_fill
 
 # === 保存 ===
 match = re.search(r"(20\d{2})", file_path)
