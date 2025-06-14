@@ -15,6 +15,30 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+
+def find_date_column(df: pd.DataFrame) -> str:
+    """Return the column name that represents a date.
+
+    The function normalizes column names by stripping whitespace and converting
+    them to lowercase. It then searches for a column likely representing a
+    date, such as "日付", "宿泊日" or "date". If no suitable column is found,
+    a ``KeyError`` is raised.
+    """
+
+    normalized = {c.strip().lower(): c for c in df.columns}
+    candidates = ["日付", "宿泊日", "date"]
+
+    for key, original in normalized.items():
+        cleaned = re.sub(r"\s+", "", key)
+        if cleaned in candidates:
+            return original
+
+    for key, original in normalized.items():
+        if re.search(r"日\s*付", key) or "宿泊日" in key or "date" in key:
+            return original
+
+    raise KeyError("日付に該当する列が見つかりません")
+
 # === GUIでキャパシティと期首月の取得 ===
 
 try:
@@ -54,7 +78,8 @@ for sheet_name, df in xls.items():
     if not isinstance(df, pd.DataFrame) or df.empty:
         continue
 
-    df["日付"] = pd.to_datetime(df["日付"], errors="coerce")
+    date_col = find_date_column(df)
+    df["日付"] = pd.to_datetime(df[date_col], errors="coerce")
     df = df.dropna(subset=["日付"])
     if df.empty:
         continue
