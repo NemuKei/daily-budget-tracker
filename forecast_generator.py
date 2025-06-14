@@ -78,9 +78,12 @@ for sheet_name, df in xls.items():
     if not isinstance(df, pd.DataFrame) or df.empty:
         continue
 
-    date_col = find_date_column(df)
+    try:
+        date_col = find_date_column(df)
+    except KeyError:
+        continue
     df["日付"] = pd.to_datetime(df[date_col], errors="coerce")
-    df = df.dropna(subset=["日付"])
+    df = df.dropna(subset=["日付"]).sort_values("日付")
     if df.empty:
         continue
 
@@ -89,20 +92,26 @@ for sheet_name, df in xls.items():
     ws = wb.create_sheet(title=f"{year}年{month}月")
 
     # 日付ごとに横持ち化
+    metrics = ["室数", "人数", "宿泊売上", "OCC", "ADR", "DOR", "RevPAR"]
     rows: list[dict] = []
-    for date, g in df.groupby(df["日付"].dt.date):
+    for _, r in df.iterrows():
+        date = r["日付"].date()
         weekday_jp = ["月", "火", "水", "木", "金", "土", "日"][date.weekday()]
         if jpholiday.is_holiday(date):
             weekday_jp = "祝"
 
-        base = {"日付": date.strftime("%Y/%m/%d"), "曜日": weekday_jp}
-        for kind in ["予算", "FC", "実績"]:
-            sub = g[g["種別"] == kind]
-            if not sub.empty:
-                r = sub.iloc[0]
-                base[f"室数_{kind}"] = r["室数"]
-                base[f"人数_{kind}"] = r["人数"]
-                base[f"宿泊売上_{kind}"] = r["宿泊売上"]
+        base = {
+            "日付": date.strftime("%Y/%m/%d"),
+            "曜日": weekday_jp,
+            "室数_予算": r.get("室数", ""),
+            "人数_予算": r.get("人数", ""),
+            "宿泊売上_予算": r.get("宿泊売上", ""),
+        }
+        for m in ["OCC", "ADR", "DOR", "RevPAR"]:
+            base[f"{m}_予算"] = ""
+        for kind in ["FC", "実績"]:
+            for m in metrics:
+                base[f"{m}_{kind}"] = ""
         rows.append(base)
 
     df_out = pd.DataFrame(rows)
@@ -110,16 +119,11 @@ for sheet_name, df in xls.items():
     # 列順を定義
     metrics = ["室数", "人数", "宿泊売上", "OCC", "ADR", "DOR", "RevPAR"]
     cols = ["日付", "曜日"]
-    for kind in ["予算", "FC", "実績"]:
-        cols += [f"{m}_{kind}" for m in metrics]
-    cols += [
-        "差_OCC_FC-予算",
-        "差_ADR_FC-予算",
-        "差_売上_FC-予算",
-        "差_OCC_実績-FC",
-        "差_ADR_実績-FC",
-        "差_売上_実績-FC",
-    ]
+    cols += [f"{m}_予算" for m in metrics]
+    cols += [f"{m}_FC" for m in metrics]
+    cols += ["差_OCC_FC-予算", "差_ADR_FC-予算", "差_売上_FC-予算"]
+    cols += [f"{m}_実績" for m in metrics]
+    cols += ["差_OCC_実績-FC", "差_ADR_実績-FC", "差_売上_実績-FC"]
     for c in cols:
         if c not in df_out.columns:
             df_out[c] = ""
@@ -131,24 +135,24 @@ for sheet_name, df in xls.items():
 
     header_map = {c.value: i for i, c in enumerate(ws[1], start=1)}
     for row in range(2, ws.max_row + 1):
-        for kind in ["予算", "FC", "実績"]:
-            room_c = get_column_letter(header_map[f"室数_{kind}"])
-            pax_c = get_column_letter(header_map[f"人数_{kind}"])
-            sales_c = get_column_letter(header_map[f"宿泊売上_{kind}"])
-            occ_c = ws.cell(row=row, column=header_map[f"OCC_{kind}"])
-            adr_c = ws.cell(row=row, column=header_map[f"ADR_{kind}"])
-            dor_c = ws.cell(row=row, column=header_map[f"DOR_{kind}"])
-            rev_c = ws.cell(row=row, column=header_map[f"RevPAR_{kind}"])
+        # 予算列の指標をExcel数式で計算
+        room_c = get_column_letter(header_map["室数_予算"])
+        pax_c = get_column_letter(header_map["人数_予算"])
+        sales_c = get_column_letter(header_map["宿泊売上_予算"])
+        occ_c = ws.cell(row=row, column=header_map["OCC_予算"])
+        adr_c = ws.cell(row=row, column=header_map["ADR_予算"])
+        dor_c = ws.cell(row=row, column=header_map["DOR_予算"])
+        rev_c = ws.cell(row=row, column=header_map["RevPAR_予算"])
 
-            occ_c.value = f"={room_c}{row}/{capacity}"
-            adr_c.value = f"={sales_c}{row}/{pax_c}{row}"
-            dor_c.value = f"={pax_c}{row}/{room_c}{row}"
-            rev_c.value = f"={sales_c}{row}/{capacity}"
+        occ_c.value = f"={room_c}{row}/{capacity}"
+        adr_c.value = f"={sales_c}{row}/{pax_c}{row}"
+        dor_c.value = f"={pax_c}{row}/{room_c}{row}"
+        rev_c.value = f"={sales_c}{row}/{capacity}"
 
-            occ_c.number_format = "0.0%"
-            adr_c.number_format = "#,##0"
-            dor_c.number_format = "0.00"
-            rev_c.number_format = "#,##0"
+        occ_c.number_format = "0.0%"
+        adr_c.number_format = "#,##0"
+        dor_c.number_format = "0.00"
+        rev_c.number_format = "#,##0"
 
         # 差異列
         ws.cell(row=row, column=header_map["差_OCC_FC-予算"]).value = (
@@ -202,10 +206,8 @@ for sheet_name, df in xls.items():
         )
 
     # 月次合計を集計
-    sales_budget = df[df["種別"] == "予算"]["宿泊売上"].sum()
-    sales_fc = df[df["種別"] == "FC"]["宿泊売上"].sum()
-    sales_actual = df[df["種別"] == "実績"]["宿泊売上"].sum()
-    summary_dict[(year, month)] = [sales_budget, sales_fc, sales_actual]
+    sales_budget = df.get("宿泊売上", pd.Series(dtype=float)).sum()
+    summary_dict[(year, month)] = [sales_budget, 0, 0]
 
 
 # === 年間集計シート ===
