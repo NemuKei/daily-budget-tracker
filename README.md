@@ -38,8 +38,9 @@ daily-budget-tracker/
 2. 必要ライブラリをインストール：
 
 ```bash
-pip install pandas openpyxl
+pip install pandas openpyxl jpholiday
 ```
+※Tkinter が入っていない環境では別途 `python3-tk` パッケージのインストールが必要です。
 
 3. スクリプトを実行：
 

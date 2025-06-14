@@ -16,16 +16,24 @@ from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 # === GUIでキャパシティと期首月の取得 ===
-root = tk.Tk()
-root.withdraw()
-capacity = simpledialog.askinteger(
-    "キャパシティ入力", "客室キャパシティ（部屋数）を入力してください："
-)
-start_month = simpledialog.askinteger(
-    "期首月入力", "期首月（例：1〜12）を入力してください："
-)
-file_path = filedialog.askopenfilename(title="日別予算Excelファイルを選択")
 
+try:
+    root = tk.Tk()
+    root.withdraw()
+    capacity = simpledialog.askinteger(
+        "キャパシティ入力",
+        "客室キャパシティ（部屋数）を入力してください：",
+    )
+    start_month = simpledialog.askinteger(
+        "期首月入力",
+        "期首月（例：1〜12）を入力してください：",
+    )
+    file_path = filedialog.askopenfilename(title="日別予算Excelファイルを選択")
+except tk.TclError:
+    print("GUI を起動できないため CLI モードで実行します。")
+    capacity = int(input("キャパシティ（部屋数）: "))
+    start_month = int(input("期首月 (1-12): "))
+    file_path = input("日別予算Excelファイルのパス: ")
 # === Excel読み込み ===
 xls = pd.read_excel(file_path, sheet_name=None)
 
@@ -41,7 +49,7 @@ sun_font = Font(color="990000")
 gray_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
 
 # --- 各月シート作成 ---
-summary_rows: list[list] = []
+summary_dict: dict[tuple[int, int], list[float]] = {}
 for sheet_name, df in xls.items():
     if not isinstance(df, pd.DataFrame) or df.empty:
         continue
@@ -172,13 +180,25 @@ for sheet_name, df in xls.items():
     sales_budget = df[df["種別"] == "予算"]["宿泊売上"].sum()
     sales_fc = df[df["種別"] == "FC"]["宿泊売上"].sum()
     sales_actual = df[df["種別"] == "実績"]["宿泊売上"].sum()
-    summary_rows.append([f"{year}年{month}月", sales_budget, sales_fc, sales_actual])
+    summary_dict[(year, month)] = [sales_budget, sales_fc, sales_actual]
+
 
 # === 年間集計シート ===
 summary = wb.create_sheet(title="年間集計")
 summary.append(["月", "予算_売上", "FC_売上", "実績_売上"])
-for row in summary_rows:
-    summary.append(row)
+match = re.search(r"(20\d{2})", file_path)
+start_year = int(match.group(1)) if match else datetime.date.today().year
+year = start_year
+month = start_month
+for _ in range(12):
+    label = f"{year}年{month}月"
+    budget, fc, actual = summary_dict.get((year, month), [0, 0, 0])
+    summary.append([label, budget, fc, actual])
+    if month == 12:
+        month = 1
+        year += 1
+    else:
+        month += 1
 
 # === 保存 ===
 match = re.search(r"(20\d{2})", file_path)
