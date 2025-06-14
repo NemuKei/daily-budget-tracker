@@ -1,4 +1,4 @@
-# 📊 Hotel Forecast Tool
+# 📊 Daily Budget Tracker
 
 ホテル向けの **日別予算・ローリングフォーキャスト・実績比較** を支援するExcel出力ツールです。  
 予算と実績の差異を視覚化し、ローリングで着地予測や修正を行う業務を効率化します。
@@ -22,7 +22,7 @@
 ## 📂 フォルダ構成（予定）
 
 ```
-hotel-forecast-tool/
+daily-budget-tracker/
 ├── forecast_generator.py       # メインスクリプト（Excel出力）
 ├── README.md
 ├── requirements.txt            # 必要なPythonライブラリ
@@ -93,7 +93,7 @@ python forecast_generator.py
 
 ## 📮 ご意見・お問い合わせ
 
-不具合報告や改善提案は [Issues](https://github.com/yourname/hotel-forecast-tool/issues) までお願いします。
+不具合報告や改善提案は [Issues](https://github.com/yourname/daily-budget-tracker/issues) までお願いします。
 
 ---
 
