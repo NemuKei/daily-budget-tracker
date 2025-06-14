@@ -358,8 +358,9 @@ for sheet_name, df in xls.items():
         ws.cell(row=forecast_row, column=header_map[f"{m}_FC"]).number_format = ws.cell(row=2, column=header_map[f"{m}_FC"]).number_format
 
     # 背景色設定
-    budget_cols = [header_map[f"{m}_予算"] for m in metrics]
-    fc_cols = [header_map[f"{m}_FC"] for m in metrics]
+    all_metrics = ["室数", "人数", "宿泊売上", "OCC", "ADR", "DOR", "RevPAR"]
+    budget_cols = [header_map[f"{m}_予算"] for m in all_metrics if f"{m}_予算" in header_map]
+    fc_cols = [header_map[f"{m}_FC"] for m in all_metrics if f"{m}_FC" in header_map]
     for col in budget_cols:
         for r in range(2, forecast_row + 1):
             ws.cell(row=r, column=col).fill = budget_fill
@@ -476,11 +477,14 @@ for _ in range(12):
         a_col_idx = base + 2
         d1 = base + 3
         d2 = base + 4
+        f_cell = get_column_letter(f_col_idx)
+        b_cell = get_column_letter(base)
+        a_cell = get_column_letter(a_col_idx)
         summary.cell(row=row_idx, column=d1).value = (
-            f"=IFERROR({get_column_letter(f_col_idx)}{row_idx}-{get_column_letter(base)}{row_idx}, \"\")"
+            f"=IF(OR(ISBLANK({f_cell}{row_idx}), {f_cell}{row_idx}=0), \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
         )
         summary.cell(row=row_idx, column=d2).value = (
-            f"=IFERROR({get_column_letter(a_col_idx)}{row_idx}-{get_column_letter(f_col_idx)}{row_idx}, \"\")"
+            f"=IF(OR(ISBLANK({a_cell}{row_idx}), {a_cell}{row_idx}=0), \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
         )
         fmt = {
             "室数": "#,##0",
@@ -517,8 +521,12 @@ for idx, m in enumerate(metrics):
     summary.cell(row=total_row, column=base).value = f"=SUM({b_letter}2:{b_letter}{end_row})"
     summary.cell(row=total_row, column=fc).value = f"=SUM({f_letter}2:{f_letter}{end_row})"
     summary.cell(row=total_row, column=act).value = f"=SUM({a_letter}2:{a_letter}{end_row})"
-    summary.cell(row=total_row, column=diff1).value = f"=IFERROR({f_letter}{total_row}-{b_letter}{total_row}, \"\")"
-    summary.cell(row=total_row, column=diff2).value = f"=IFERROR({a_letter}{total_row}-{f_letter}{total_row}, \"\")"
+    summary.cell(row=total_row, column=diff1).value = (
+        f"=IF(OR(ISBLANK({f_letter}{total_row}), {f_letter}{total_row}=0), \"\", {f_letter}{total_row}-{b_letter}{total_row})"
+    )
+    summary.cell(row=total_row, column=diff2).value = (
+        f"=IF(OR(ISBLANK({a_letter}{total_row}), {a_letter}{total_row}=0), \"\", {a_letter}{total_row}-{f_letter}{total_row})"
+    )
     fmt = {
         "室数": "#,##0",
         "人数": "#,##0",
@@ -531,25 +539,28 @@ for idx, m in enumerate(metrics):
     for c in [base, fc, act, diff1, diff2]:
         summary.cell(row=total_row, column=c).number_format = fmt
 days_sum = sum(days) if days else 0
-for kind, offset in [("予算",0), ("FC",1), ("実績",2)]:
-    room_sum = "+".join(room_refs[kind]) if room_refs[kind] else "0"
-    pax_sum = "+".join(pax_refs[kind]) if pax_refs[kind] else "0"
-    sales_sum = "+".join(sales_refs[kind]) if sales_refs[kind] else "0"
+for kind, offset in [("予算", 0), ("FC", 1), ("実績", 2)]:
+    room_col = 2 + metrics.index("室数") * 5 + offset
+    pax_col = 2 + metrics.index("人数") * 5 + offset
+    sales_col = 2 + metrics.index("宿泊売上") * 5 + offset
     occ_col = 2 + metrics.index("OCC") * 5 + offset
     adr_col = 2 + metrics.index("ADR") * 5 + offset
     dor_col = 2 + metrics.index("DOR") * 5 + offset
     rev_col = 2 + metrics.index("RevPAR") * 5 + offset
+    r_letter = get_column_letter(room_col)
+    p_letter = get_column_letter(pax_col)
+    s_letter = get_column_letter(sales_col)
     summary.cell(row=total_row, column=occ_col).value = (
-        f"=IFERROR(({room_sum})/{capacity}/{days_sum}, \"\")"
+        f"=IFERROR({r_letter}{total_row}/{capacity}/{days_sum}, \"\")"
     )
     summary.cell(row=total_row, column=adr_col).value = (
-        f"=IFERROR(({sales_sum})/({pax_sum}), \"\")"
+        f"=IFERROR({s_letter}{total_row}/{p_letter}{total_row}, \"\")"
     )
     summary.cell(row=total_row, column=dor_col).value = (
-        f"=IFERROR(({pax_sum})/({room_sum}), \"\")"
+        f"=IFERROR({p_letter}{total_row}/{r_letter}{total_row}, \"\")"
     )
     summary.cell(row=total_row, column=rev_col).value = (
-        f"=IFERROR(({sales_sum})/{capacity}/{days_sum}, \"\")"
+        f"=IFERROR({s_letter}{total_row}/{capacity}/{days_sum}, \"\")"
     )
     for c in [occ_col, adr_col, dor_col, rev_col]:
         summary.cell(row=total_row, column=c).number_format = summary.cell(row=2, column=c).number_format
