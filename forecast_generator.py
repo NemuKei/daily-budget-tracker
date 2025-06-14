@@ -182,6 +182,7 @@ for sheet_name, df in xls.items():
     sales_actual = df[df["種別"] == "実績"]["宿泊売上"].sum()
     summary_dict[(year, month)] = [sales_budget, sales_fc, sales_actual]
 
+
 # === 年間集計シート ===
 summary = wb.create_sheet(title="年間集計")
 summary.append(["月", "予算_売上", "FC_売上", "実績_売上"])
