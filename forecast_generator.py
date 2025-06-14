@@ -151,7 +151,7 @@ for sheet_name, df in xls.items():
         rev_c = ws.cell(row=row, column=header_map["RevPAR_予算"])
 
         occ_c.value = f"={room_c}{row}/{capacity}"
-        adr_c.value = f"={sales_c}{row}/{pax_c}{row}"
+        adr_c.value = f"={sales_c}{row}/{room_c}{row}"
         dor_c.value = f"={pax_c}{row}/{room_c}{row}"
         rev_c.value = f"={sales_c}{row}/{capacity}"
 
@@ -172,7 +172,7 @@ for sheet_name, df in xls.items():
         fc_rev = ws.cell(row=row, column=header_map["RevPAR_FC"])
 
         fc_occ.value = f"=IFERROR({fc_room_c}{row}/{capacity}, \"\")"
-        fc_adr.value = f"=IFERROR({fc_sales_c}{row}/{fc_pax_c}{row}, \"\")"
+        fc_adr.value = f"=IFERROR({fc_sales_c}{row}/{fc_room_c}{row}, \"\")"
         fc_dor.value = f"=IFERROR({fc_pax_c}{row}/{fc_room_c}{row}, \"\")"
         fc_rev.value = f"=IFERROR({fc_sales_c}{row}/{capacity}, \"\")"
 
@@ -191,7 +191,7 @@ for sheet_name, df in xls.items():
         act_rev = ws.cell(row=row, column=header_map["RevPAR_実績"])
 
         act_occ.value = f"=IFERROR({act_room_c}{row}/{capacity}, \"\")"
-        act_adr.value = f"=IFERROR({act_sales_c}{row}/{act_pax_c}{row}, \"\")"
+        act_adr.value = f"=IFERROR({act_sales_c}{row}/{act_room_c}{row}, \"\")"
         act_dor.value = f"=IFERROR({act_pax_c}{row}/{act_room_c}{row}, \"\")"
         act_rev.value = f"=IFERROR({act_sales_c}{row}/{capacity}, \"\")"
 
@@ -296,7 +296,7 @@ for sheet_name, df in xls.items():
             f"=IFERROR(SUM({rl}2:{rl}{data_end_row})/{capacity}/COUNT({rl}2:{rl}{data_end_row}), \"\")"
         )
         ws.cell(row=total_row, column=adr_col).value = (
-            f"=IFERROR(SUM({sl}2:{sl}{data_end_row})/SUM({pl}2:{pl}{data_end_row}), \"\")"
+            f"=IFERROR(SUM({sl}2:{sl}{data_end_row})/SUM({rl}2:{rl}{data_end_row}), \"\")"
         )
         ws.cell(row=total_row, column=dor_col).value = (
             f"=IFERROR(SUM({pl}2:{pl}{data_end_row})/SUM({rl}2:{rl}{data_end_row}), \"\")"
@@ -346,7 +346,7 @@ for sheet_name, df in xls.items():
         f"=IFERROR({get_column_letter(header_map['室数_FC'])}{forecast_row}/({capacity}*{days_count}), \"\")"
     )
     ws.cell(row=forecast_row, column=header_map["ADR_FC"]).value = (
-        f"=IFERROR({get_column_letter(header_map['宿泊売上_FC'])}{forecast_row}/{get_column_letter(header_map['人数_FC'])}{forecast_row}, \"\")"
+        f"=IFERROR({get_column_letter(header_map['宿泊売上_FC'])}{forecast_row}/{get_column_letter(header_map['室数_FC'])}{forecast_row}, \"\")"
     )
     ws.cell(row=forecast_row, column=header_map["DOR_FC"]).value = (
         f"=IFERROR({get_column_letter(header_map['人数_FC'])}{forecast_row}/{get_column_letter(header_map['室数_FC'])}{forecast_row}, \"\")"
@@ -554,7 +554,7 @@ for kind, offset in [("予算", 0), ("FC", 1), ("実績", 2)]:
         f"=IFERROR({r_letter}{total_row}/{capacity}/{days_sum}, \"\")"
     )
     summary.cell(row=total_row, column=adr_col).value = (
-        f"=IFERROR({s_letter}{total_row}/{p_letter}{total_row}, \"\")"
+        f"=IFERROR({s_letter}{total_row}/{r_letter}{total_row}, \"\")"
     )
     summary.cell(row=total_row, column=dor_col).value = (
         f"=IFERROR({p_letter}{total_row}/{r_letter}{total_row}, \"\")"
