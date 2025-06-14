@@ -481,10 +481,10 @@ for _ in range(12):
         b_cell = get_column_letter(base)
         a_cell = get_column_letter(a_col_idx)
         summary.cell(row=row_idx, column=d1).value = (
-            f"=IF(OR(ISBLANK({f_cell}{row_idx}), {f_cell}{row_idx}=0), \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
+            f"=IFERROR(IF(OR(ISBLANK({f_cell}{row_idx}), {f_cell}{row_idx}=0), \"\", {f_cell}{row_idx}-{b_cell}{row_idx}), \"\")"
         )
         summary.cell(row=row_idx, column=d2).value = (
-            f"=IF(OR(ISBLANK({a_cell}{row_idx}), {a_cell}{row_idx}=0), \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
+            f"=IFERROR(IF(OR(ISBLANK({a_cell}{row_idx}), {a_cell}{row_idx}=0), \"\", {a_cell}{row_idx}-{f_cell}{row_idx}), \"\")"
         )
         fmt = {
             "室数": "#,##0",
@@ -522,10 +522,10 @@ for idx, m in enumerate(metrics):
     summary.cell(row=total_row, column=fc).value = f"=SUM({f_letter}2:{f_letter}{end_row})"
     summary.cell(row=total_row, column=act).value = f"=SUM({a_letter}2:{a_letter}{end_row})"
     summary.cell(row=total_row, column=diff1).value = (
-        f"=IF(OR(ISBLANK({f_letter}{total_row}), {f_letter}{total_row}=0), \"\", {f_letter}{total_row}-{b_letter}{total_row})"
+        f"=IFERROR(IF(OR(ISBLANK({f_letter}{total_row}), {f_letter}{total_row}=0), \"\", {f_letter}{total_row}-{b_letter}{total_row}), \"\")"
     )
     summary.cell(row=total_row, column=diff2).value = (
-        f"=IF(OR(ISBLANK({a_letter}{total_row}), {a_letter}{total_row}=0), \"\", {a_letter}{total_row}-{f_letter}{total_row})"
+        f"=IFERROR(IF(OR(ISBLANK({a_letter}{total_row}), {a_letter}{total_row}=0), \"\", {a_letter}{total_row}-{f_letter}{total_row}), \"\")"
     )
     fmt = {
         "室数": "#,##0",
