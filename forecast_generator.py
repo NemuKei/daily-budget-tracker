@@ -11,7 +11,7 @@ import jpholiday
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.formatting.rule import FormulaRule
-from openpyxl.styles import Font, PatternFill
+from openpyxl.styles import Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
@@ -71,9 +71,11 @@ sat_font = Font(color="003366")
 sun_fill = PatternFill(start_color="FFE5E5", end_color="FFE5E5", fill_type="solid")
 sun_font = Font(color="990000")
 gray_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+thin = Side(style="thin")
+medium = Side(style="medium")
 
 # --- 各月シート作成 ---
-summary_dict: dict[tuple[int, int], list[float]] = {}
+summary_dict: dict[tuple[int, int], dict[str, int]] = {}
 for sheet_name, df in xls.items():
     if not isinstance(df, pd.DataFrame) or df.empty:
         continue
@@ -134,7 +136,8 @@ for sheet_name, df in xls.items():
         ws.append(r)
 
     header_map = {c.value: i for i, c in enumerate(ws[1], start=1)}
-    for row in range(2, ws.max_row + 1):
+    data_end_row = ws.max_row
+    for row in range(2, data_end_row + 1):
         # 予算列の指標をExcel数式で計算
         room_c = get_column_letter(header_map["室数_予算"])
         pax_c = get_column_letter(header_map["人数_予算"])
@@ -154,31 +157,80 @@ for sheet_name, df in xls.items():
         dor_c.number_format = "0.00"
         rev_c.number_format = "#,##0"
 
+        # FC列の数式
+        fc_room_c = get_column_letter(header_map["室数_FC"])
+        fc_pax_c = get_column_letter(header_map["人数_FC"])
+        fc_sales_c = get_column_letter(header_map["宿泊売上_FC"])
+        fc_occ = ws.cell(row=row, column=header_map["OCC_FC"])
+        fc_adr = ws.cell(row=row, column=header_map["ADR_FC"])
+        fc_dor = ws.cell(row=row, column=header_map["DOR_FC"])
+        fc_rev = ws.cell(row=row, column=header_map["RevPAR_FC"])
+
+        fc_occ.value = f"=IFERROR({fc_room_c}{row}/{capacity}, \"\")"
+        fc_adr.value = f"=IFERROR({fc_sales_c}{row}/{fc_pax_c}{row}, \"\")"
+        fc_dor.value = f"=IFERROR({fc_pax_c}{row}/{fc_room_c}{row}, \"\")"
+        fc_rev.value = f"=IFERROR({fc_sales_c}{row}/{capacity}, \"\")"
+
+        fc_occ.number_format = "0.0%"
+        fc_adr.number_format = "#,##0"
+        fc_dor.number_format = "0.00"
+        fc_rev.number_format = "#,##0"
+
+        # 実績列の数式
+        act_room_c = get_column_letter(header_map["室数_実績"])
+        act_pax_c = get_column_letter(header_map["人数_実績"])
+        act_sales_c = get_column_letter(header_map["宿泊売上_実績"])
+        act_occ = ws.cell(row=row, column=header_map["OCC_実績"])
+        act_adr = ws.cell(row=row, column=header_map["ADR_実績"])
+        act_dor = ws.cell(row=row, column=header_map["DOR_実績"])
+        act_rev = ws.cell(row=row, column=header_map["RevPAR_実績"])
+
+        act_occ.value = f"=IFERROR({act_room_c}{row}/{capacity}, \"\")"
+        act_adr.value = f"=IFERROR({act_sales_c}{row}/{act_pax_c}{row}, \"\")"
+        act_dor.value = f"=IFERROR({act_pax_c}{row}/{act_room_c}{row}, \"\")"
+        act_rev.value = f"=IFERROR({act_sales_c}{row}/{capacity}, \"\")"
+
+        act_occ.number_format = "0.0%"
+        act_adr.number_format = "#,##0"
+        act_dor.number_format = "0.00"
+        act_rev.number_format = "#,##0"
+
+        # 手入力セルの表示形式
+        for col_name in ["室数_FC", "人数_FC", "宿泊売上_FC", "室数_実績", "人数_実績", "宿泊売上_実績"]:
+            ws.cell(row=row, column=header_map[col_name]).number_format = "#,##0"
+
         # 差異列
         ws.cell(row=row, column=header_map["差_OCC_FC-予算"]).value = (
-            f"={get_column_letter(header_map['OCC_FC'])}{row}-"
-            f"{get_column_letter(header_map['OCC_予算'])}{row}"
+            f"=IFERROR({get_column_letter(header_map['OCC_FC'])}{row}-"
+            f"{get_column_letter(header_map['OCC_予算'])}{row}, \"\")"
         )
         ws.cell(row=row, column=header_map["差_ADR_FC-予算"]).value = (
-            f"={get_column_letter(header_map['ADR_FC'])}{row}-"
-            f"{get_column_letter(header_map['ADR_予算'])}{row}"
+            f"=IFERROR({get_column_letter(header_map['ADR_FC'])}{row}-"
+            f"{get_column_letter(header_map['ADR_予算'])}{row}, \"\")"
         )
         ws.cell(row=row, column=header_map["差_売上_FC-予算"]).value = (
-            f"={get_column_letter(header_map['宿泊売上_FC'])}{row}-"
-            f"{get_column_letter(header_map['宿泊売上_予算'])}{row}"
+            f"=IFERROR({get_column_letter(header_map['宿泊売上_FC'])}{row}-"
+            f"{get_column_letter(header_map['宿泊売上_予算'])}{row}, \"\")"
         )
         ws.cell(row=row, column=header_map["差_OCC_実績-FC"]).value = (
-            f"={get_column_letter(header_map['OCC_実績'])}{row}-"
-            f"{get_column_letter(header_map['OCC_FC'])}{row}"
+            f"=IFERROR({get_column_letter(header_map['OCC_実績'])}{row}-"
+            f"{get_column_letter(header_map['OCC_FC'])}{row}, \"\")"
         )
         ws.cell(row=row, column=header_map["差_ADR_実績-FC"]).value = (
-            f"={get_column_letter(header_map['ADR_実績'])}{row}-"
-            f"{get_column_letter(header_map['ADR_FC'])}{row}"
+            f"=IFERROR({get_column_letter(header_map['ADR_実績'])}{row}-"
+            f"{get_column_letter(header_map['ADR_FC'])}{row}, \"\")"
         )
         ws.cell(row=row, column=header_map["差_売上_実績-FC"]).value = (
-            f"={get_column_letter(header_map['宿泊売上_実績'])}{row}-"
-            f"{get_column_letter(header_map['宿泊売上_FC'])}{row}"
+            f"=IFERROR({get_column_letter(header_map['宿泊売上_実績'])}{row}-"
+            f"{get_column_letter(header_map['宿泊売上_FC'])}{row}, \"\")"
         )
+
+        for diff_col in ["差_OCC_FC-予算", "差_OCC_実績-FC"]:
+            ws.cell(row=row, column=header_map[diff_col]).number_format = "0.0%"
+        for diff_col in ["差_ADR_FC-予算", "差_ADR_実績-FC"]:
+            ws.cell(row=row, column=header_map[diff_col]).number_format = "#,##0"
+        for diff_col in ["差_売上_FC-予算", "差_売上_実績-FC"]:
+            ws.cell(row=row, column=header_map[diff_col]).number_format = "#,##0"
 
         # 曜日装飾
         w_cell = ws.cell(row=row, column=header_map["曜日"])
@@ -202,30 +254,104 @@ for sheet_name, df in xls.items():
         col_letter = get_column_letter(header_map["室数_FC"] + offset)
         rule = FormulaRule(formula=[formula], fill=gray_fill)
         ws.conditional_formatting.add(
-            f"{col_letter}2:{col_letter}{ws.max_row}", rule
+            f"{col_letter}2:{col_letter}{data_end_row}", rule
         )
 
-    # 月次合計を集計
-    sales_budget = df.get("宿泊売上", pd.Series(dtype=float)).sum()
-    summary_dict[(year, month)] = [sales_budget, 0, 0]
+    # 合計行
+    total_row = data_end_row + 1
+    ws.cell(row=total_row, column=1, value="合計")
+    for col in range(3, ws.max_column + 1):
+        letter = get_column_letter(col)
+        ws.cell(row=total_row, column=col).value = f"=SUM({letter}2:{letter}{data_end_row})"
+
+    # 修正月次フォーキャスト
+    forecast_row = total_row + 1
+    ws.cell(row=forecast_row, column=1, value="修正月次フォーキャスト")
+    metrics = ["室数", "人数", "宿泊売上", "OCC", "ADR", "DOR", "RevPAR"]
+    for m in metrics:
+        fc_col = header_map[f"{m}_FC"]
+        act_col = header_map[f"{m}_実績"]
+        fc_letter = get_column_letter(fc_col)
+        act_letter = get_column_letter(act_col)
+        cell = ws.cell(row=forecast_row, column=fc_col)
+        cell.value = f"=SUM({act_letter}2:{act_letter}{data_end_row})+SUMIFS({fc_letter}2:{fc_letter}{data_end_row},{act_letter}2:{act_letter}{data_end_row},\"\")"
+        cell.number_format = ws.cell(row=2, column=fc_col).number_format
+
+    summary_dict[(year, month)] = {
+        "sheet": ws.title,
+        "total_row": total_row,
+        "header_map": header_map,
+    }
+
+    # 罫線設定
+    block_ends = [header_map["RevPAR_予算"], header_map["RevPAR_FC"], header_map["RevPAR_実績"]]
+    for r in ws.iter_rows(min_row=1, max_row=forecast_row, max_col=ws.max_column):
+        for c in r:
+            c.border = Border(top=thin, bottom=thin, left=thin, right=thin)
+    for end_col in block_ends:
+        for row in range(1, forecast_row + 1):
+            cell = ws.cell(row=row, column=end_col)
+            cell.border = Border(
+                top=cell.border.top,
+                bottom=cell.border.bottom,
+                left=cell.border.left,
+                right=medium,
+            )
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+        cell.border = Border(top=medium, bottom=medium, left=cell.border.left, right=cell.border.right)
+    for row_idx in [total_row, forecast_row]:
+        for cell in ws[row_idx]:
+            cell.border = Border(top=medium, bottom=medium, left=cell.border.left, right=cell.border.right)
 
 
 # === 年間集計シート ===
 summary = wb.create_sheet(title="年間集計")
-summary.append(["月", "予算_売上", "FC_売上", "実績_売上"])
+metrics = ["宿泊売上", "室数", "人数", "OCC", "ADR", "DOR", "RevPAR"]
+kinds = ["予算", "FC", "実績"]
+header = ["月"] + [f"{k}_{m}" for k in kinds for m in metrics]
+summary.append(header)
 match = re.search(r"(20\d{2})", file_path)
 start_year = int(match.group(1)) if match else datetime.date.today().year
 year = start_year
 month = start_month
 for _ in range(12):
     label = f"{year}年{month}月"
-    budget, fc, actual = summary_dict.get((year, month), [0, 0, 0])
-    summary.append([label, budget, fc, actual])
+    info = summary_dict.get((year, month))
+    row = [label]
+    if info:
+        sheet = wb[info["sheet"]]
+        total_row = info["total_row"]
+        hmap = info["header_map"]
+        for k in kinds:
+            for m in metrics:
+                if k == "予算":
+                    col = hmap.get(f"{m}_予算")
+                elif k == "FC":
+                    col = hmap.get(f"{m}_FC")
+                else:
+                    col = hmap.get(f"{m}_実績")
+                if col:
+                    letter = get_column_letter(col)
+                    row.append(f"='{sheet.title}'!{letter}{total_row}")
+                else:
+                    row.append(0)
+    else:
+        row += [0] * (len(metrics) * len(kinds))
+    summary.append(row)
     if month == 12:
         month = 1
         year += 1
     else:
         month += 1
+
+# 年間合計行
+total_row = summary.max_row + 1
+end_row = total_row - 1
+summary.cell(row=total_row, column=1, value="年間合計")
+for col in range(2, summary.max_column + 1):
+    letter = get_column_letter(col)
+    summary.cell(row=total_row, column=col).value = f"=SUM({letter}2:{letter}{end_row})"
 
 # === 保存 ===
 match = re.search(r"(20\d{2})", file_path)
