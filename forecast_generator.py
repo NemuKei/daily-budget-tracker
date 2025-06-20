@@ -171,10 +171,18 @@ for sheet_name, df in xls.items():
         fc_dor = ws.cell(row=row, column=header_map["DOR_FC"])
         fc_rev = ws.cell(row=row, column=header_map["RevPAR_FC"])
 
-        fc_occ.value = f"=IFERROR({fc_room_c}{row}/{capacity}, \"\")"
-        fc_adr.value = f"=IFERROR({fc_sales_c}{row}/{fc_room_c}{row}, \"\")"
-        fc_dor.value = f"=IFERROR({fc_pax_c}{row}/{fc_room_c}{row}, \"\")"
-        fc_rev.value = f"=IFERROR({fc_sales_c}{row}/{capacity}, \"\")"
+        fc_occ.value = (
+            f"=IF({fc_room_c}{row}=\"\", \"\", {fc_room_c}{row}/{capacity})"
+        )
+        fc_adr.value = (
+            f"=IF(OR({fc_sales_c}{row}=\"\", {fc_room_c}{row}=\"\"), \"\", {fc_sales_c}{row}/{fc_room_c}{row})"
+        )
+        fc_dor.value = (
+            f"=IF(OR({fc_pax_c}{row}=\"\", {fc_room_c}{row}=\"\"), \"\", {fc_pax_c}{row}/{fc_room_c}{row})"
+        )
+        fc_rev.value = (
+            f"=IF({fc_sales_c}{row}=\"\", \"\", {fc_sales_c}{row}/{capacity})"
+        )
 
         fc_occ.number_format = "0.0%"
         fc_adr.number_format = "#,##0"
@@ -190,10 +198,18 @@ for sheet_name, df in xls.items():
         act_dor = ws.cell(row=row, column=header_map["DOR_実績"])
         act_rev = ws.cell(row=row, column=header_map["RevPAR_実績"])
 
-        act_occ.value = f"=IFERROR({act_room_c}{row}/{capacity}, \"\")"
-        act_adr.value = f"=IFERROR({act_sales_c}{row}/{act_room_c}{row}, \"\")"
-        act_dor.value = f"=IFERROR({act_pax_c}{row}/{act_room_c}{row}, \"\")"
-        act_rev.value = f"=IFERROR({act_sales_c}{row}/{capacity}, \"\")"
+        act_occ.value = (
+            f"=IF({act_room_c}{row}=\"\", \"\", {act_room_c}{row}/{capacity})"
+        )
+        act_adr.value = (
+            f"=IF(OR({act_sales_c}{row}=\"\", {act_room_c}{row}=\"\"), \"\", {act_sales_c}{row}/{act_room_c}{row})"
+        )
+        act_dor.value = (
+            f"=IF(OR({act_pax_c}{row}=\"\", {act_room_c}{row}=\"\"), \"\", {act_pax_c}{row}/{act_room_c}{row})"
+        )
+        act_rev.value = (
+            f"=IF({act_sales_c}{row}=\"\", \"\", {act_sales_c}{row}/{capacity})"
+        )
 
         act_occ.number_format = "0.0%"
         act_adr.number_format = "#,##0"
@@ -206,22 +222,22 @@ for sheet_name, df in xls.items():
 
         # 差異列
         ws.cell(row=row, column=header_map["差_OCC_FC-予算"]).value = (
-            f"=IF(ISBLANK({get_column_letter(header_map['OCC_FC'])}{row}), \"\", {get_column_letter(header_map['OCC_FC'])}{row}-{get_column_letter(header_map['OCC_予算'])}{row})"
+            f"=IF({get_column_letter(header_map['OCC_FC'])}{row}=\"\", \"\", {get_column_letter(header_map['OCC_FC'])}{row}-{get_column_letter(header_map['OCC_予算'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_ADR_FC-予算"]).value = (
-            f"=IF(ISBLANK({get_column_letter(header_map['ADR_FC'])}{row}), \"\", {get_column_letter(header_map['ADR_FC'])}{row}-{get_column_letter(header_map['ADR_予算'])}{row})"
+            f"=IF({get_column_letter(header_map['ADR_FC'])}{row}=\"\", \"\", {get_column_letter(header_map['ADR_FC'])}{row}-{get_column_letter(header_map['ADR_予算'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_売上_FC-予算"]).value = (
-            f"=IF(ISBLANK({get_column_letter(header_map['宿泊売上_FC'])}{row}), \"\", {get_column_letter(header_map['宿泊売上_FC'])}{row}-{get_column_letter(header_map['宿泊売上_予算'])}{row})"
+            f"=IF({get_column_letter(header_map['宿泊売上_FC'])}{row}=\"\", \"\", {get_column_letter(header_map['宿泊売上_FC'])}{row}-{get_column_letter(header_map['宿泊売上_予算'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_OCC_実績-FC"]).value = (
-            f"=IF(ISBLANK({get_column_letter(header_map['OCC_実績'])}{row}), \"\", {get_column_letter(header_map['OCC_実績'])}{row}-{get_column_letter(header_map['OCC_FC'])}{row})"
+            f"=IF({get_column_letter(header_map['OCC_実績'])}{row}=\"\", \"\", {get_column_letter(header_map['OCC_実績'])}{row}-{get_column_letter(header_map['OCC_FC'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_ADR_実績-FC"]).value = (
-            f"=IF(ISBLANK({get_column_letter(header_map['ADR_実績'])}{row}), \"\", {get_column_letter(header_map['ADR_実績'])}{row}-{get_column_letter(header_map['ADR_FC'])}{row})"
+            f"=IF({get_column_letter(header_map['ADR_実績'])}{row}=\"\", \"\", {get_column_letter(header_map['ADR_実績'])}{row}-{get_column_letter(header_map['ADR_FC'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_売上_実績-FC"]).value = (
-            f"=IF(ISBLANK({get_column_letter(header_map['宿泊売上_実績'])}{row}), \"\", {get_column_letter(header_map['宿泊売上_実績'])}{row}-{get_column_letter(header_map['宿泊売上_FC'])}{row})"
+            f"=IF({get_column_letter(header_map['宿泊売上_実績'])}{row}=\"\", \"\", {get_column_letter(header_map['宿泊売上_実績'])}{row}-{get_column_letter(header_map['宿泊売上_FC'])}{row})"
         )
 
         for diff_col in ["差_OCC_FC-予算", "差_OCC_実績-FC"]:
@@ -287,16 +303,16 @@ for sheet_name, df in xls.items():
         ws.cell(row=total_row, column=p_col).value = f"=SUM({pl}2:{pl}{data_end_row})"
         ws.cell(row=total_row, column=s_col).value = f"=SUM({sl}2:{sl}{data_end_row})"
         ws.cell(row=total_row, column=occ_col).value = (
-            f"=IFERROR(SUM({rl}2:{rl}{data_end_row})/{capacity}/COUNT({rl}2:{rl}{data_end_row}), \"\")"
+            f"=IF(COUNT({rl}2:{rl}{data_end_row})=0, \"\", SUM({rl}2:{rl}{data_end_row})/{capacity}/COUNT({rl}2:{rl}{data_end_row}))"
         )
         ws.cell(row=total_row, column=adr_col).value = (
-            f"=IFERROR(SUM({sl}2:{sl}{data_end_row})/SUM({rl}2:{rl}{data_end_row}), \"\")"
+            f"=IF(COUNT({rl}2:{rl}{data_end_row})=0, \"\", SUM({sl}2:{sl}{data_end_row})/SUM({rl}2:{rl}{data_end_row}))"
         )
         ws.cell(row=total_row, column=dor_col).value = (
-            f"=IFERROR(SUM({pl}2:{pl}{data_end_row})/SUM({rl}2:{rl}{data_end_row}), \"\")"
+            f"=IF(COUNT({rl}2:{rl}{data_end_row})=0, \"\", SUM({pl}2:{pl}{data_end_row})/SUM({rl}2:{rl}{data_end_row}))"
         )
         ws.cell(row=total_row, column=rev_col).value = (
-            f"=IFERROR(SUM({sl}2:{sl}{data_end_row})/{capacity}/COUNT({rl}2:{rl}{data_end_row}), \"\")"
+            f"=IF(COUNT({rl}2:{rl}{data_end_row})=0, \"\", SUM({sl}2:{sl}{data_end_row})/{capacity}/COUNT({rl}2:{rl}{data_end_row}))"
         )
         for col in [r_col, p_col, s_col, occ_col, adr_col, dor_col, rev_col]:
             ws.cell(row=total_row, column=col).number_format = ws.cell(row=2, column=col).number_format
@@ -313,9 +329,16 @@ for sheet_name, df in xls.items():
         right_col = header_map[r]
         ltr = get_column_letter(left_col)
         rtr = get_column_letter(right_col)
-        ws.cell(row=total_row, column=header_map[diff_col]).value = (
-            f"=IF(ISBLANK({ltr}{total_row}), \"\", {ltr}{total_row}-{rtr}{total_row})"
-        )
+        if diff_col in ["差_売上_FC-予算", "差_売上_実績-FC"]:
+            range_left = f"{ltr}2:{ltr}{data_end_row}"
+            range_right = f"{rtr}2:{rtr}{data_end_row}"
+            ws.cell(row=total_row, column=header_map[diff_col]).value = (
+                f"=IF(COUNT({range_left})=0, \"\", SUMIF({range_left}, \"<>\", {range_left})-SUMIF({range_left}, \"<>\", {range_right}))"
+            )
+        else:
+            ws.cell(row=total_row, column=header_map[diff_col]).value = (
+                f"=IF({ltr}{total_row}=\"\", \"\", {ltr}{total_row}-{rtr}{total_row})"
+            )
         ws.cell(row=total_row, column=header_map[diff_col]).number_format = ws.cell(row=2, column=header_map[diff_col]).number_format
         ws.cell(row=total_row, column=header_map[diff_col]).fill = PatternFill(
             start_color="FFFAD0",
@@ -339,16 +362,16 @@ for sheet_name, df in xls.items():
 
     days_count = data_end_row - 1
     ws.cell(row=forecast_row, column=header_map["OCC_FC"]).value = (
-        f"=IFERROR({get_column_letter(header_map['室数_FC'])}{forecast_row}/({capacity}*{days_count}), \"\")"
+        f"=IF({get_column_letter(header_map['室数_FC'])}{forecast_row}=\"\", \"\", {get_column_letter(header_map['室数_FC'])}{forecast_row}/({capacity}*{days_count}))"
     )
     ws.cell(row=forecast_row, column=header_map["ADR_FC"]).value = (
-        f"=IFERROR({get_column_letter(header_map['宿泊売上_FC'])}{forecast_row}/{get_column_letter(header_map['室数_FC'])}{forecast_row}, \"\")"
+        f"=IF(OR({get_column_letter(header_map['宿泊売上_FC'])}{forecast_row}=\"\", {get_column_letter(header_map['室数_FC'])}{forecast_row}=\"\"), \"\", {get_column_letter(header_map['宿泊売上_FC'])}{forecast_row}/{get_column_letter(header_map['室数_FC'])}{forecast_row})"
     )
     ws.cell(row=forecast_row, column=header_map["DOR_FC"]).value = (
-        f"=IFERROR({get_column_letter(header_map['人数_FC'])}{forecast_row}/{get_column_letter(header_map['室数_FC'])}{forecast_row}, \"\")"
+        f"=IF(OR({get_column_letter(header_map['人数_FC'])}{forecast_row}=\"\", {get_column_letter(header_map['室数_FC'])}{forecast_row}=\"\"), \"\", {get_column_letter(header_map['人数_FC'])}{forecast_row}/{get_column_letter(header_map['室数_FC'])}{forecast_row})"
     )
     ws.cell(row=forecast_row, column=header_map["RevPAR_FC"]).value = (
-        f"=IFERROR({get_column_letter(header_map['宿泊売上_FC'])}{forecast_row}/({capacity}*{days_count}), \"\")"
+        f"=IF({get_column_letter(header_map['宿泊売上_FC'])}{forecast_row}=\"\", \"\", {get_column_letter(header_map['宿泊売上_FC'])}{forecast_row}/({capacity}*{days_count}))"
     )
     for m in ["OCC", "ADR", "DOR", "RevPAR"]:
         ws.cell(row=forecast_row, column=header_map[f"{m}_FC"]).number_format = ws.cell(row=2, column=header_map[f"{m}_FC"]).number_format
@@ -486,10 +509,10 @@ for _ in range(12):
         b_cell = get_column_letter(base)
         a_cell = get_column_letter(a_col_idx)
         summary.cell(row=row_idx, column=d1).value = (
-            f"=IF(ISBLANK({f_cell}{row_idx}), \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
+            f"=IF({f_cell}{row_idx}=\"\", \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
         )
         summary.cell(row=row_idx, column=d2).value = (
-            f"=IF(ISBLANK({a_cell}{row_idx}), \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
+            f"=IF({a_cell}{row_idx}=\"\", \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
         )
         fmt = {
             "室数": "#,##0",
@@ -527,10 +550,10 @@ for idx, m in enumerate(metrics):
     summary.cell(row=total_row, column=fc).value = f"=SUM({f_letter}2:{f_letter}{end_row})"
     summary.cell(row=total_row, column=act).value = f"=SUM({a_letter}2:{a_letter}{end_row})"
     summary.cell(row=total_row, column=diff1).value = (
-        f"=IF(ISBLANK({f_letter}{total_row}), \"\", {f_letter}{total_row}-{b_letter}{total_row})"
+        f"=IF({f_letter}{total_row}=\"\", \"\", {f_letter}{total_row}-{b_letter}{total_row})"
     )
     summary.cell(row=total_row, column=diff2).value = (
-        f"=IF(ISBLANK({a_letter}{total_row}), \"\", {a_letter}{total_row}-{f_letter}{total_row})"
+        f"=IF({a_letter}{total_row}=\"\", \"\", {a_letter}{total_row}-{f_letter}{total_row})"
     )
     fmt = {
         "室数": "#,##0",
