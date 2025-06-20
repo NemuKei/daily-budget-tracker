@@ -558,11 +558,13 @@ for idx, m in enumerate(metrics):
     summary.cell(row=total_row, column=fc).value = f"=SUM({f_letter}2:{f_letter}{end_row})"
     summary.cell(row=total_row, column=act).value = f"=SUM({a_letter}2:{a_letter}{end_row})"
     if m in ["室数", "人数", "宿泊売上"]:
+        diff1_range = f"{get_column_letter(diff1)}2:{get_column_letter(diff1)}{end_row}"
+        diff2_range = f"{get_column_letter(diff2)}2:{get_column_letter(diff2)}{end_row}"
         summary.cell(row=total_row, column=diff1).value = (
-            f"=IF(OR({f_letter}{total_row}=\"\", {f_letter}{total_row}=0), \"\", {f_letter}{total_row}-{b_letter}{total_row})"
+            f"=IF(COUNT({diff1_range})=0, \"\", SUMIF({diff1_range}, \"<>\", {diff1_range}))"
         )
         summary.cell(row=total_row, column=diff2).value = (
-            f"=IF(OR({a_letter}{total_row}=\"\", {a_letter}{total_row}=0), \"\", {a_letter}{total_row}-{f_letter}{total_row})"
+            f"=IF(COUNT({diff2_range})=0, \"\", SUMIF({diff2_range}, \"<>\", {diff2_range}))"
         )
     else:
         summary.cell(row=total_row, column=diff1).value = (
