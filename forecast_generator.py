@@ -206,28 +206,22 @@ for sheet_name, df in xls.items():
 
         # 差異列
         ws.cell(row=row, column=header_map["差_OCC_FC-予算"]).value = (
-            f"=IFERROR({get_column_letter(header_map['OCC_FC'])}{row}-"
-            f"{get_column_letter(header_map['OCC_予算'])}{row}, \"\")"
+            f"=IF(ISBLANK({get_column_letter(header_map['OCC_FC'])}{row}), \"\", {get_column_letter(header_map['OCC_FC'])}{row}-{get_column_letter(header_map['OCC_予算'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_ADR_FC-予算"]).value = (
-            f"=IFERROR({get_column_letter(header_map['ADR_FC'])}{row}-"
-            f"{get_column_letter(header_map['ADR_予算'])}{row}, \"\")"
+            f"=IF(ISBLANK({get_column_letter(header_map['ADR_FC'])}{row}), \"\", {get_column_letter(header_map['ADR_FC'])}{row}-{get_column_letter(header_map['ADR_予算'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_売上_FC-予算"]).value = (
-            f"=IFERROR({get_column_letter(header_map['宿泊売上_FC'])}{row}-"
-            f"{get_column_letter(header_map['宿泊売上_予算'])}{row}, \"\")"
+            f"=IF(ISBLANK({get_column_letter(header_map['宿泊売上_FC'])}{row}), \"\", {get_column_letter(header_map['宿泊売上_FC'])}{row}-{get_column_letter(header_map['宿泊売上_予算'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_OCC_実績-FC"]).value = (
-            f"=IFERROR({get_column_letter(header_map['OCC_実績'])}{row}-"
-            f"{get_column_letter(header_map['OCC_FC'])}{row}, \"\")"
+            f"=IF(ISBLANK({get_column_letter(header_map['OCC_実績'])}{row}), \"\", {get_column_letter(header_map['OCC_実績'])}{row}-{get_column_letter(header_map['OCC_FC'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_ADR_実績-FC"]).value = (
-            f"=IFERROR({get_column_letter(header_map['ADR_実績'])}{row}-"
-            f"{get_column_letter(header_map['ADR_FC'])}{row}, \"\")"
+            f"=IF(ISBLANK({get_column_letter(header_map['ADR_実績'])}{row}), \"\", {get_column_letter(header_map['ADR_実績'])}{row}-{get_column_letter(header_map['ADR_FC'])}{row})"
         )
         ws.cell(row=row, column=header_map["差_売上_実績-FC"]).value = (
-            f"=IFERROR({get_column_letter(header_map['宿泊売上_実績'])}{row}-"
-            f"{get_column_letter(header_map['宿泊売上_FC'])}{row}, \"\")"
+            f"=IF(ISBLANK({get_column_letter(header_map['宿泊売上_実績'])}{row}), \"\", {get_column_letter(header_map['宿泊売上_実績'])}{row}-{get_column_letter(header_map['宿泊売上_FC'])}{row})"
         )
 
         for diff_col in ["差_OCC_FC-予算", "差_OCC_実績-FC"]:
@@ -319,7 +313,9 @@ for sheet_name, df in xls.items():
         right_col = header_map[r]
         ltr = get_column_letter(left_col)
         rtr = get_column_letter(right_col)
-        ws.cell(row=total_row, column=header_map[diff_col]).value = f"=IFERROR({ltr}{total_row}-{rtr}{total_row}, \"\")"
+        ws.cell(row=total_row, column=header_map[diff_col]).value = (
+            f"=IF(ISBLANK({ltr}{total_row}), \"\", {ltr}{total_row}-{rtr}{total_row})"
+        )
         ws.cell(row=total_row, column=header_map[diff_col]).number_format = ws.cell(row=2, column=header_map[diff_col]).number_format
         ws.cell(row=total_row, column=header_map[diff_col]).fill = PatternFill(
             start_color="FFFAD0",
@@ -383,6 +379,15 @@ for sheet_name, df in xls.items():
                 end_color="FFFAD0",
                 fill_type="solid",
             )
+        col_letter = get_column_letter(col)
+        neg_rule = FormulaRule(
+            formula=[f"AND(ISNUMBER({col_letter}2),{col_letter}2<0)"],
+            font=Font(color="FF0000"),
+        )
+        ws.conditional_formatting.add(
+            f"{col_letter}2:{col_letter}{forecast_row}",
+            neg_rule,
+        )
 
     summary_dict[(year, month)] = {
         "sheet": ws.title,
@@ -481,10 +486,10 @@ for _ in range(12):
         b_cell = get_column_letter(base)
         a_cell = get_column_letter(a_col_idx)
         summary.cell(row=row_idx, column=d1).value = (
-            f"=IFERROR(IF(OR(ISBLANK({f_cell}{row_idx}), {f_cell}{row_idx}=0), \"\", {f_cell}{row_idx}-{b_cell}{row_idx}), \"\")"
+            f"=IF(ISBLANK({f_cell}{row_idx}), \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
         )
         summary.cell(row=row_idx, column=d2).value = (
-            f"=IFERROR(IF(OR(ISBLANK({a_cell}{row_idx}), {a_cell}{row_idx}=0), \"\", {a_cell}{row_idx}-{f_cell}{row_idx}), \"\")"
+            f"=IF(ISBLANK({a_cell}{row_idx}), \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
         )
         fmt = {
             "室数": "#,##0",
@@ -522,10 +527,10 @@ for idx, m in enumerate(metrics):
     summary.cell(row=total_row, column=fc).value = f"=SUM({f_letter}2:{f_letter}{end_row})"
     summary.cell(row=total_row, column=act).value = f"=SUM({a_letter}2:{a_letter}{end_row})"
     summary.cell(row=total_row, column=diff1).value = (
-        f"=IFERROR(IF(OR(ISBLANK({f_letter}{total_row}), {f_letter}{total_row}=0), \"\", {f_letter}{total_row}-{b_letter}{total_row}), \"\")"
+        f"=IF(ISBLANK({f_letter}{total_row}), \"\", {f_letter}{total_row}-{b_letter}{total_row})"
     )
     summary.cell(row=total_row, column=diff2).value = (
-        f"=IFERROR(IF(OR(ISBLANK({a_letter}{total_row}), {a_letter}{total_row}=0), \"\", {a_letter}{total_row}-{f_letter}{total_row}), \"\")"
+        f"=IF(ISBLANK({a_letter}{total_row}), \"\", {a_letter}{total_row}-{f_letter}{total_row})"
     )
     fmt = {
         "室数": "#,##0",
@@ -609,6 +614,15 @@ for col in diff_cols:
             end_color="FFFAD0",
             fill_type="solid",
         )
+    col_letter = get_column_letter(col)
+    neg_rule = FormulaRule(
+        formula=[f"AND(ISNUMBER({col_letter}2),{col_letter}2<0)"],
+        font=Font(color="FF0000"),
+    )
+    summary.conditional_formatting.add(
+        f"{col_letter}2:{col_letter}{total_row}",
+        neg_rule,
+    )
 
 # === 保存 ===
 match = re.search(r"(20\d{2})", file_path)
