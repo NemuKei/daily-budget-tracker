@@ -508,12 +508,20 @@ for _ in range(12):
         f_cell = get_column_letter(f_col_idx)
         b_cell = get_column_letter(base)
         a_cell = get_column_letter(a_col_idx)
-        summary.cell(row=row_idx, column=d1).value = (
-            f"=IF({f_cell}{row_idx}=\"\", \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
-        )
-        summary.cell(row=row_idx, column=d2).value = (
-            f"=IF({a_cell}{row_idx}=\"\", \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
-        )
+        if m in ["室数", "人数", "宿泊売上"]:
+            summary.cell(row=row_idx, column=d1).value = (
+                f"=IF(OR({f_cell}{row_idx}=\"\", {f_cell}{row_idx}=0), \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
+            )
+            summary.cell(row=row_idx, column=d2).value = (
+                f"=IF(OR({a_cell}{row_idx}=\"\", {a_cell}{row_idx}=0), \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
+            )
+        else:
+            summary.cell(row=row_idx, column=d1).value = (
+                f"=IF({f_cell}{row_idx}=\"\", \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
+            )
+            summary.cell(row=row_idx, column=d2).value = (
+                f"=IF({a_cell}{row_idx}=\"\", \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
+            )
         fmt = {
             "室数": "#,##0",
             "人数": "#,##0",
@@ -549,12 +557,20 @@ for idx, m in enumerate(metrics):
     summary.cell(row=total_row, column=base).value = f"=SUM({b_letter}2:{b_letter}{end_row})"
     summary.cell(row=total_row, column=fc).value = f"=SUM({f_letter}2:{f_letter}{end_row})"
     summary.cell(row=total_row, column=act).value = f"=SUM({a_letter}2:{a_letter}{end_row})"
-    summary.cell(row=total_row, column=diff1).value = (
-        f"=IF({f_letter}{total_row}=\"\", \"\", {f_letter}{total_row}-{b_letter}{total_row})"
-    )
-    summary.cell(row=total_row, column=diff2).value = (
-        f"=IF({a_letter}{total_row}=\"\", \"\", {a_letter}{total_row}-{f_letter}{total_row})"
-    )
+    if m in ["室数", "人数", "宿泊売上"]:
+        summary.cell(row=total_row, column=diff1).value = (
+            f"=IF(OR({f_letter}{total_row}=\"\", {f_letter}{total_row}=0), \"\", {f_letter}{total_row}-{b_letter}{total_row})"
+        )
+        summary.cell(row=total_row, column=diff2).value = (
+            f"=IF(OR({a_letter}{total_row}=\"\", {a_letter}{total_row}=0), \"\", {a_letter}{total_row}-{f_letter}{total_row})"
+        )
+    else:
+        summary.cell(row=total_row, column=diff1).value = (
+            f"=IF({f_letter}{total_row}=\"\", \"\", {f_letter}{total_row}-{b_letter}{total_row})"
+        )
+        summary.cell(row=total_row, column=diff2).value = (
+            f"=IF({a_letter}{total_row}=\"\", \"\", {a_letter}{total_row}-{f_letter}{total_row})"
+        )
     fmt = {
         "室数": "#,##0",
         "人数": "#,##0",
