@@ -692,6 +692,7 @@ for title, left, right, fill in blocks:
             year += 1
         else:
             month += 1
+    end_row = header_row + 12
     total_row = end_row + 1
     variance.cell(row=total_row, column=1, value="年間合計")
     for idx, m in enumerate(metrics, start=2):
