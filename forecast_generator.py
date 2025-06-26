@@ -533,9 +533,6 @@ for m in metrics:
         f"{m}_FC",
         f"{m}_OH",
         f"{m}_実績",
-        f"差_{m}_FC-予算",
-        f"差_{m}_OH-FC",
-        f"差_{m}_実績-FC",
     ]
 summary.append(header)
 summary_header_map = {c.value: i for i, c in enumerate(summary[1], start=1)}
@@ -579,7 +576,6 @@ for _ in range(12):
                 row.append(f"='{sheet.title}'!{get_column_letter(a_col)}{tr}")
             else:
                 row.append(0)
-            row += ["", "", ""]
         room_refs["予算"].append(f"='{sheet.title}'!{get_column_letter(hmap['室数_予算'])}{tr}")
         room_refs["FC"].append(f"='{sheet.title}'!{get_column_letter(hmap['室数_FC'])}{tr}")
         room_refs["OH"].append(f"='{sheet.title}'!{get_column_letter(hmap['室数_OH'])}{tr}")
@@ -593,42 +589,19 @@ for _ in range(12):
         sales_refs["OH"].append(f"='{sheet.title}'!{get_column_letter(hmap['宿泊売上_OH'])}{tr}")
         sales_refs["実績"].append(f"='{sheet.title}'!{get_column_letter(hmap['宿泊売上_実績'])}{tr}")
     else:
-        row += [0] * (len(metrics) * 7)
+        row += [0] * (len(metrics) * 4)
         days.append(0)
     summary.append(row)
     row_idx = summary.max_row
     for idx, m in enumerate(metrics):
-        base = 2 + idx * 7
+        base = 2 + idx * 4
         f_col_idx = base + 1
         oh_col_idx = base + 2
         a_col_idx = base + 3
-        d_fc = base + 4
-        d_oh = base + 5
-        d_act = base + 6
         f_cell = get_column_letter(f_col_idx)
         b_cell = get_column_letter(base)
         oh_cell = get_column_letter(oh_col_idx)
         a_cell = get_column_letter(a_col_idx)
-        if m in ["室数", "人数", "宿泊売上"]:
-            summary.cell(row=row_idx, column=d_fc).value = (
-                f"=IF(OR({f_cell}{row_idx}=\"\", {f_cell}{row_idx}=0), \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
-            )
-            summary.cell(row=row_idx, column=d_oh).value = (
-                f"=IF(OR({oh_cell}{row_idx}=\"\", {oh_cell}{row_idx}=0), \"\", {oh_cell}{row_idx}-{f_cell}{row_idx})"
-            )
-            summary.cell(row=row_idx, column=d_act).value = (
-                f"=IF(OR({a_cell}{row_idx}=\"\", {a_cell}{row_idx}=0), \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
-            )
-        else:
-            summary.cell(row=row_idx, column=d_fc).value = (
-                f"=IF({f_cell}{row_idx}=\"\", \"\", {f_cell}{row_idx}-{b_cell}{row_idx})"
-            )
-            summary.cell(row=row_idx, column=d_oh).value = (
-                f"=IF({oh_cell}{row_idx}=\"\", \"\", {oh_cell}{row_idx}-{f_cell}{row_idx})"
-            )
-            summary.cell(row=row_idx, column=d_act).value = (
-                f"=IF({a_cell}{row_idx}=\"\", \"\", {a_cell}{row_idx}-{f_cell}{row_idx})"
-            )
         fmt = {
             "室数": "#,##0",
             "人数": "#,##0",
@@ -639,8 +612,6 @@ for _ in range(12):
             "RevPAR": "#,##0",
         }[m]
         for col in [base, f_col_idx, oh_col_idx, a_col_idx]:
-            summary.cell(row=row_idx, column=col).number_format = fmt
-        for col in [d_fc, d_oh, d_act]:
             summary.cell(row=row_idx, column=col).number_format = fmt
     if month == 12:
         month = 1
@@ -653,13 +624,10 @@ total_row = summary.max_row + 1
 end_row = total_row - 1
 summary.cell(row=total_row, column=1, value="年間合計")
 for idx, m in enumerate(metrics):
-    base = 2 + idx * 7
+    base = 2 + idx * 4
     fc = base + 1
     oh = base + 2
     act = base + 3
-    diff_fc = base + 4
-    diff_oh = base + 5
-    diff_act = base + 6
     b_letter = get_column_letter(base)
     f_letter = get_column_letter(fc)
     oh_letter = get_column_letter(oh)
@@ -668,29 +636,6 @@ for idx, m in enumerate(metrics):
     summary.cell(row=total_row, column=fc).value = f"=SUM({f_letter}2:{f_letter}{end_row})"
     summary.cell(row=total_row, column=oh).value = f"=SUM({oh_letter}2:{oh_letter}{end_row})"
     summary.cell(row=total_row, column=act).value = f"=SUM({a_letter}2:{a_letter}{end_row})"
-    if m in ["室数", "人数", "宿泊売上"]:
-        diff_fc_range = f"{get_column_letter(diff_fc)}2:{get_column_letter(diff_fc)}{end_row}"
-        diff_oh_range = f"{get_column_letter(diff_oh)}2:{get_column_letter(diff_oh)}{end_row}"
-        diff_act_range = f"{get_column_letter(diff_act)}2:{get_column_letter(diff_act)}{end_row}"
-        summary.cell(row=total_row, column=diff_fc).value = (
-            f"=IF(COUNT({diff_fc_range})=0, \"\", SUMIF({diff_fc_range}, \"<>\", {diff_fc_range}))"
-        )
-        summary.cell(row=total_row, column=diff_oh).value = (
-            f"=IF(COUNT({diff_oh_range})=0, \"\", SUMIF({diff_oh_range}, \"<>\", {diff_oh_range}))"
-        )
-        summary.cell(row=total_row, column=diff_act).value = (
-            f"=IF(COUNT({diff_act_range})=0, \"\", SUMIF({diff_act_range}, \"<>\", {diff_act_range}))"
-        )
-    else:
-        summary.cell(row=total_row, column=diff_fc).value = (
-            f"=IF({f_letter}{total_row}=\"\", \"\", {f_letter}{total_row}-{b_letter}{total_row})"
-        )
-        summary.cell(row=total_row, column=diff_oh).value = (
-            f"=IF({oh_letter}{total_row}=\"\", \"\", {oh_letter}{total_row}-{f_letter}{total_row})"
-        )
-        summary.cell(row=total_row, column=diff_act).value = (
-            f"=IF({a_letter}{total_row}=\"\", \"\", {a_letter}{total_row}-{f_letter}{total_row})"
-        )
     fmt = {
         "室数": "#,##0",
         "人数": "#,##0",
@@ -700,17 +645,17 @@ for idx, m in enumerate(metrics):
         "DOR": "0.00",
         "RevPAR": "#,##0",
     }[m]
-    for c in [base, fc, oh, act, diff_fc, diff_oh, diff_act]:
+    for c in [base, fc, oh, act]:
         summary.cell(row=total_row, column=c).number_format = fmt
 days_sum = sum(days) if days else 0
 for kind, offset in [("予算", 0), ("FC", 1), ("OH", 2), ("実績", 3)]:
-    room_col = 2 + metrics.index("室数") * 7 + offset
-    pax_col = 2 + metrics.index("人数") * 7 + offset
-    sales_col = 2 + metrics.index("宿泊売上") * 7 + offset
-    occ_col = 2 + metrics.index("OCC") * 7 + offset
-    adr_col = 2 + metrics.index("ADR") * 7 + offset
-    dor_col = 2 + metrics.index("DOR") * 7 + offset
-    rev_col = 2 + metrics.index("RevPAR") * 7 + offset
+    room_col = 2 + metrics.index("室数") * 4 + offset
+    pax_col = 2 + metrics.index("人数") * 4 + offset
+    sales_col = 2 + metrics.index("宿泊売上") * 4 + offset
+    occ_col = 2 + metrics.index("OCC") * 4 + offset
+    adr_col = 2 + metrics.index("ADR") * 4 + offset
+    dor_col = 2 + metrics.index("DOR") * 4 + offset
+    rev_col = 2 + metrics.index("RevPAR") * 4 + offset
     r_letter = get_column_letter(room_col)
     p_letter = get_column_letter(pax_col)
     s_letter = get_column_letter(sales_col)
@@ -730,10 +675,10 @@ for kind, offset in [("予算", 0), ("FC", 1), ("OH", 2), ("実績", 3)]:
         summary.cell(row=total_row, column=c).number_format = summary.cell(row=2, column=c).number_format
 
 block_ends = [
-    2 + metrics.index("RevPAR") * 7,  # 予算ブロック最後
-    2 + metrics.index("RevPAR") * 7 + 1,  # FCブロック最後
-    2 + metrics.index("RevPAR") * 7 + 2,  # OHブロック最後
-    2 + metrics.index("RevPAR") * 7 + 3,  # 実績ブロック最後
+    2 + metrics.index("RevPAR") * 4,  # 予算ブロック最後
+    2 + metrics.index("RevPAR") * 4 + 1,  # FCブロック最後
+    2 + metrics.index("RevPAR") * 4 + 2,  # OHブロック最後
+    2 + metrics.index("RevPAR") * 4 + 3,  # 実績ブロック最後
 ]
 for r in summary.iter_rows(min_row=1, max_row=total_row, max_col=summary.max_column):
     for c in r:
@@ -753,7 +698,7 @@ for cell in summary[1]:
 for cell in summary[total_row]:
     cell.border = Border(top=medium, bottom=medium, left=cell.border.left, right=cell.border.right)
 
-budget_cols = [2 + i * 7 for i in range(len(metrics))]
+budget_cols = [2 + i * 4 for i in range(len(metrics))]
 fc_cols = [c + 1 for c in budget_cols]
 oh_cols = [c + 2 for c in budget_cols]
 for col in budget_cols:
@@ -766,29 +711,81 @@ for col in oh_cols:
     for r in range(2, total_row + 1):
         summary.cell(row=r, column=col).fill = PatternFill()
 
-diff_cols = [
-    summary_header_map[f"差_{m}_FC-予算"] for m in metrics
-] + [
-    summary_header_map[f"差_{m}_OH-FC"] for m in metrics
-] + [
-    summary_header_map[f"差_{m}_実績-FC"] for m in metrics
+# === 年間差異シート ===
+variance = wb.create_sheet(title="年間差異")
+blocks = [
+    ("FC − 予算", "FC", "予算", PatternFill(start_color="DDEEFF", end_color="DDEEFF", fill_type="solid")),
+    ("実績 − 予算", "実績", "予算", PatternFill(start_color="DDEEFF", end_color="DDEEFF", fill_type="solid")),
+    ("OH − FC", "OH", "FC", PatternFill(start_color="DDFFDD", end_color="DDFFDD", fill_type="solid")),
+    ("実績 − FC", "実績", "FC", PatternFill(start_color="DDFFDD", end_color="DDFFDD", fill_type="solid")),
 ]
-for col in diff_cols:
-    for r in range(2, total_row + 1):
-        summary.cell(row=r, column=col).fill = PatternFill(
-            start_color="FFFAD0",
-            end_color="FFFAD0",
-            fill_type="solid",
+for title, left, right, fill in blocks:
+    start_row = variance.max_row + 1
+    variance.cell(row=start_row, column=1, value=title).font = Font(bold=True)
+    header_row = start_row + 1
+    variance.cell(row=header_row, column=1, value="月")
+    for idx, m in enumerate(metrics, start=2):
+        variance.cell(row=header_row, column=idx, value=m)
+    year = start_year
+    month = start_month
+    for i in range(12):
+        row = header_row + 1 + i
+        variance.cell(row=row, column=1, value=f"{year}年{month}月")
+        info = summary_dict.get((year, month))
+        if info:
+            sheet = wb[info["sheet"]]
+            tr = info["total_row"]
+            hmap = info["header_map"]
+            for idx, m in enumerate(metrics, start=2):
+                l_col = hmap.get(f"{m}_{left}")
+                r_col = hmap.get(f"{m}_{right}")
+                cell = variance.cell(row=row, column=idx)
+                if l_col and r_col:
+                    l_addr = f"'{sheet.title}'!{get_column_letter(l_col)}{tr}"
+                    r_addr = f"'{sheet.title}'!{get_column_letter(r_col)}{tr}"
+                    if m in ["室数", "人数", "宿泊売上"]:
+                        cell.value = f"=IF(OR({l_addr}=\"\", {l_addr}=0), \"\", {l_addr}-{r_addr})"
+                    else:
+                        cell.value = f"=IF({l_addr}=\"\", \"\", {l_addr}-{r_addr})"
+                cell.number_format = {
+                    "室数": "#,##0",
+                    "人数": "#,##0",
+                    "宿泊売上": "#,##0",
+                    "OCC": "0.0%",
+                    "ADR": "#,##0",
+                    "DOR": "0.00",
+                    "RevPAR": "#,##0",
+                }[m]
+        else:
+            for idx, m in enumerate(metrics, start=2):
+                cell = variance.cell(row=row, column=idx, value="")
+                cell.number_format = {
+                    "室数": "#,##0",
+                    "人数": "#,##0",
+                    "宿泊売上": "#,##0",
+                    "OCC": "0.0%",
+                    "ADR": "#,##0",
+                    "DOR": "0.00",
+                    "RevPAR": "#,##0",
+                }[m]
+        if month == 12:
+            month = 1
+            year += 1
+        else:
+            month += 1
+    end_row = header_row + 12
+    for r in range(header_row, end_row + 1):
+        for c in range(1, len(metrics) + 2):
+            variance.cell(row=r, column=c).fill = fill
+    for idx in range(2, len(metrics) + 2):
+        col_letter = get_column_letter(idx)
+        neg_rule = FormulaRule(
+            formula=[f"AND(ISNUMBER({col_letter}{header_row + 1}),{col_letter}{header_row + 1}<0)"],
+            font=Font(color="FF0000"),
         )
-    col_letter = get_column_letter(col)
-    neg_rule = FormulaRule(
-        formula=[f"AND(ISNUMBER({col_letter}2),{col_letter}2<0)"],
-        font=Font(color="FF0000"),
-    )
-    summary.conditional_formatting.add(
-        f"{col_letter}2:{col_letter}{total_row}",
-        neg_rule,
-    )
+        variance.conditional_formatting.add(
+            f"{col_letter}{header_row + 1}:{col_letter}{end_row}", neg_rule
+        )
 
 # === 保存 ===
 match = re.search(r"(20\d{2})", file_path)
