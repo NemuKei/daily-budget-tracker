@@ -546,7 +546,8 @@ for _ in range(12):
     else:
         month += 1
 
-summary.freeze_panes = "B3"
+# ウィンドウ枠固定を解除
+# summary.freeze_panes = "B3"
 summary_totals: dict[str, dict[str, str]] = {}
 current_row = 1
 for kind in kinds:
@@ -650,6 +651,8 @@ for title, left, right, fill in blocks:
         variance.cell(row=header_row, column=idx, value=label)
     total_col = len(month_labels) + 2
     variance.cell(row=header_row, column=total_col, value="年間合計")
+    for cell in variance[header_row]:
+        cell.font = Font(bold=True)
     metric_rows: dict[str, int] = {}
     for metric_idx, metric in enumerate(metrics, start=header_row + 1):
         metric_rows[metric] = metric_idx
